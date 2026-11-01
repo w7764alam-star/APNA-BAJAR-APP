@@ -1,2 +1,1 @@
-// Put your deployed backend URL here (no trailing slash). Leave empty for offline demo mode.
-window.APNA_API = "";
+window.APNA_API = "https://apna-bajar-backend.onrender.com";
