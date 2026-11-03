@@ -125,7 +125,7 @@ const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN"),off=p=>Math.round((1-p.
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function toast(m){const t=$("#toast");t.textContent=m;t.className="on";setTimeout(()=>t.className="",1600)}
 function upd(){const g=$("#gr");if(g)g.textContent="Hello, "+(S.user?S.user.name.split(" ")[0]:"Shopper");const lc=$("#lc");if(lc)lc.textContent=S.loc||"Select PIN code";const nc=$("#nc"),u=(S.notes||[]).filter(x=>!x.r).length;if(nc){nc.textContent=u||"";nc.style.display=u?"":"none"}const wd=$("#wd");if(wd)wd.style.display=S.wish.length?"block":"none";const n=Object.values(S.cart).reduce((a,b)=>a+b,0);$("#cc").textContent=n||"";$("#cc").style.display=n?"":"none"}
-const go=h=>{location.hash=h};
+let RDR=0;const go=h=>{if(RDR)location.replace("#"+h);else location.hash=h};
 function card(p){return `<div class="card" data-go="product-${p.id}"><button class="hb" data-w="${p.id}" aria-label="Wishlist">${S.wish.includes(p.id)?"♥":"♡"}</button><div class="im">${p.e}</div><div class="cb"><div class="br">${p.b}</div><div class="pn">${p.n}</div><div><span class="pr">${inr(p.p)}</span><span class="mo">${inr(p.o)}</span><span class="of">${off(p)}% off</span></div><div class="mu">${p.r?"★ "+p.r:"New listing"}${p.s?"":" · Out of stock"} · ${p.cond}</div><div class="mu">📍 ${p.city}</div></div></div>`}
 function totals(){let sub=0;for(const i in S.cart){const p=pid(i);if(p)sub+=p.p*S.cart[i]}
 let disc=0,c=S.coupon&&COUP[S.coupon];if(c){if(sub>=c.min&&!(c.first&&S.orders.length))disc=c.t=="%"?sub*c.v/100:c.v;else S.coupon=null}
@@ -206,7 +206,8 @@ const f={pl:(a,b)=>a.p-b.p,ph:(a,b)=>b.p-a.p,d:(a,b)=>off(b)-off(a),rt:(a,b)=>b.
 $("#sr").innerHTML=`<div class="mu" style="margin-bottom:6px">${l.length} result(s)</div>`+(l.length?`<div class="grid">${l.map(card).join("")}</div>`:`<div class="cn"><b>🔍</b>No products match. Try different filters.</div>`)}
 function bindSearch(){const g=(i,k,fn)=>$(i).addEventListener("input",e=>{Q[k]=fn?fn(e.target.value):e.target.value;results()});g("#sq","q");g("#so","sort");g("#sc","cat");g("#sp","max",Number);g("#scd","cond");g("#sci","city");g("#sbr","brand");g("#sdc","disc",Number);$("#so").value=Q.sort;$("#sp").value=Q.max;$("#scd").value=Q.cond;$("#sbr").value=Q.brand;$("#sdc").value=Q.disc;$("#sclr").onclick=()=>{Q={q:"",cat:"",sort:"r",max:0,stock:0,r4:0,cond:"",city:"",brand:"",disc:0};render()};
 $("#sk").onclick=e=>{Q.stock^=1;e.target.classList.toggle("on");results()};$("#s4").onclick=e=>{Q.r4^=1;e.target.classList.toggle("on");results()};results()}
-function render(){const h=(location.hash||"#home").slice(1),m=h.match(/^(product|order|seller)-(\w+)$/),name=m?m[1]:h;
+function render(){RDR=1;try{return render0()}finally{RDR=0}}
+function render0(){const h=(location.hash||"#home").slice(1),m=h.match(/^(product|order|seller)-(\w+)$/),name=m?m[1]:h;
 document.querySelectorAll(".nav a").forEach(a=>a.classList.toggle("on",a.dataset.n==name));
 const fn=R[name];V.innerHTML=fn?fn(m&&m[2]):nf();window.scrollTo(0,0);if(name=="search")bindSearch();if(name=="login")bindLogin();if(name=="location")bindLoc();if(name=="sell"&&$("#pa"))bindSell();if(name=="cart")bindCart();if(name=="checkout"&&$("#po"))bindCo();if(name=="profile"&&$("#lo2"))$("#lo2").onclick=()=>{S.user=null;sv();toast("Logged out");render()}}
 function bindCart(){if(!$("#ap"))return;$("#ap").onclick=()=>{const c=$("#cp").value.trim().toUpperCase();if(!COUP[c])return toast("Invalid coupon");S.coupon=c;const t=totals();sv();render();toast(S.coupon?"Coupon applied":"Coupon conditions not met")}}
@@ -239,19 +240,19 @@ if(d.go){if(d.cat!==undefined)Q.cat=d.cat;if(d.go=="checkout"&&!S.user)S.pend="c
 $("#hs").addEventListener("keydown",e=>{if(e.key=="Enter"){Q.q=e.target.value;Q.cat="";e.target.value="";go("search");if(location.hash=="#search")render()}});
 if(!S.notes)S.notes=[{t:"Welcome to APNA BAZAR",m:"Use APNA10 on orders above ₹500.",d:"Today",r:0}];
 let VOICE=true,LANG="hi-IN";document.documentElement.dataset.theme=S.theme||"light";
-function listen(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return toast("Voice is not supported in this browser. Try Chrome");const r=new SR(),b=$("#qm");r.lang=LANG;r.interimResults=false;b.textContent="🔴";r.onresult=e=>ask(e.results[0][0].transcript);r.onerror=e=>{b.textContent="🎤";toast(e.error=="not-allowed"||e.error=="service-not-allowed"?"Mic is blocked in this view. Open the app in Chrome and allow the microphone":e.error=="no-speech"?"I did not hear anything, try again":"Voice failed ("+e.error+"). You can type instead")};r.onend=()=>{b.textContent="🎤"};try{r.start()}catch(x){b.textContent="🎤";toast("Could not start the mic")}}
+function listen(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$("#qi").focus();return toast("Voice is not supported here. Tap the box and use the keyboard 🎤")}const r=new SR(),b=$("#qm");r.lang=LANG;r.interimResults=false;b.textContent="🔴";r.onresult=e=>ask(e.results[0][0].transcript);r.onerror=e=>{b.textContent="🎤";$("#qi").focus();toast(e.error=="not-allowed"||e.error=="service-not-allowed"?"Mic is blocked in this view. Open the app in Chrome and allow the microphone":e.error=="no-speech"?"I did not hear anything, try again":"Voice failed ("+e.error+"). You can type instead")};r.onend=()=>{b.textContent="🎤"};try{r.start()}catch(x){b.textContent="🎤";toast("Could not start the mic")}}
 function speak(t){if(!VOICE||!window.speechSynthesis)return;const u=new SpeechSynthesisUtterance(String(t).replace(/<[^>]+>/g," ").replace(/#(\d+)/g,"product $1"));u.lang=LANG;speechSynthesis.cancel();speechSynthesis.speak(u)}
 $("#mb").onclick=()=>{aib.onclick();listen()};
 const sh=document.createElement("div");sh.id="sheet";sh.innerHTML=`<div class="sb"><div class="row sp"><b>Apna Helper · Live AI</b><button id="sx" aria-label="Close">✕</button></div><div id="msgs"></div><div class="hs" id="qc">${["Track my order","Coupons","Delivery charges","Show my cart"].map(x=>`<button class="chip" data-qa="${x}">${x}</button>`).join("")}</div><div class="row"><button class="btn s o" id="qm" aria-label="Speak">🎤</button><input class="f" id="qi" placeholder="Speak or type…" style="margin:0"><button class="btn s" id="qs">Send</button></div><div class="row" style="margin-top:8px"><button class="chip" id="ql">हिंदी</button><button class="chip" id="qv">🔊 Voice reply on</button><button class="chip" id="qt">🌙 Dark mode</button></div></div>`;document.body.append(sh);
 const aib=document.createElement("button");aib.id="ai";aib.setAttribute("aria-label","Ask Apna Helper");aib.innerHTML='<svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 11H6.2z" fill="#0b5a43"/><path d="M9 8a3 3 0 016 0" stroke="#c9a24a" stroke-width="2" fill="none"/></svg><span class="gd"></span>';document.body.append(aib);
 function say(t,me){const m=$("#msgs");m.insertAdjacentHTML("beforeend",`<div class="${me?"me":"bot"}">${t}</div>`);m.scrollTop=m.scrollHeight}
-function ask(q){q=q.trim();if(!q)return;say(esc(q),1);const l=q.toLowerCase();let a;if(AI&&!/order|track|coupon|offer|discount|deliver|charge|shipping|cart/.test(l)){aiAsk(q);return}
+function ask(q){q=q.trim();if(!q)return;say(esc(q),1);const l=q.toLowerCase();let a;if(/^\s*(hi+|hello+|hey+|hlo|helo|namaste|namaskar|हेलो|हैलो|नमस्ते|हाय)[\s!.?।]*$/i.test(q)||/kaise ho|kya haal/.test(l)){guide("start");return}if(AI&&!/order|track|coupon|offer|discount|deliver|charge|shipping|cart/.test(l)){aiAsk(q);return}
 if(/order|track/.test(l))a=S.orders.length?`Your latest order is #${S.orders[0].id}: ${STAT[S.orders[0].st]}. <a href="#order-${S.orders[0].id}">View tracking</a>`:"You have no orders yet.";
 else if(/coupon|offer|discount/.test(l))a=Object.keys(COUP).map(k=>`<b>${k}</b>: ${COUP[k].d}`).join("<br>");
 else if(/deliver|charge|shipping/.test(l))a="Delivery is free above ₹499, otherwise ₹40. Standard delivery estimate: 3–5 days.";
 else if(/cart/.test(l))a=`You have ${Object.values(S.cart).reduce((x,y)=>x+y,0)} item(s). <a href="#cart">Open cart</a>`;
 else{const w=l.split(/\W+/).filter(x=>x.length>2),r=P.filter(p=>w.some(x=>(p.n+p.b+p.c).toLowerCase().includes(x))).slice(0,3);a=r.length?"Here’s what I found:<br>"+r.map(p=>`<a href="#product-${p.id}">${p.e} ${p.n} · ${inr(p.p)}</a>`).join("<br>"):"Maaf kijiye, samajh nahi aaya. Neeche menu se chuniye ya kisi product ka naam likhiye."}
-setTimeout(()=>{say(a);speak(a)},250)}
+setTimeout(()=>{if(a.startsWith("Maaf kijiye"))return guide("start");say(a);speak(a)},250)}
 aib.onclick=()=>{sh.classList.add("on");if(!$("#msgs").children.length)guide("start")};
 function gsay(t,list){say(t);const m=$("#msgs");m.insertAdjacentHTML("beforeend",`<div class="gc">${list.map(x=>`<button class="chip" data-ga="${esc(x[1])}">${x[0]}</button>`).join("")}</div>`);m.scrollTop=m.scrollHeight;speak(t)}
 function guide(k){const u=S.user,o=S.orders[0],n=Object.values(S.cart).reduce((a,b)=>a+b,0),M=["⬅ Menu","g:start"],sl=u&&u.role=="seller";
@@ -282,7 +283,7 @@ const ST2=["confirmed","processing","shipped","out_for_delivery","delivered"];
 const mapO=o=>({id:o.id,date:new Date(o.created_at).toLocaleDateString("en-IN"),st:Math.max(0,ST2.indexOf(o.status)),cx:o.status=="cancelled"?1:0,items:(o.items||[]).map(i=>({n:i.title,e:"📦",p:i.price,q:i.qty})),sub:o.subtotal,disc:o.discount,del:o.delivery,tot:o.total,addr:`${o.address.name}, ${o.address.line}, PIN ${o.address.pin}, ${o.address.label}`,pay:o.payment_method=="cod"?"COD":"Online",ps:o.payment_status,ret:o.return_status?{s:0,why:""}:null,rets:o.return_status||""});
 async function pullOrders(){if(!S.token)return;try{S.orders=(await api("/orders")).map(mapO)}catch(e){}}
 if(ONLINE){
- AI=true;
+ AI=false;
  R.login=()=>`<h2>Welcome to APNA BAZAR</h2><div class="hs"><button class="chip on" data-role="customer">🛍 Customer</button><button class="chip" data-role="seller">🏪 Seller</button></div><div class="box"><div class="hs"><button class="chip on" data-mode="login">Login</button><button class="chip" data-mode="register">Register</button></div><input class="f" id="ln" placeholder="Full name" style="display:none"><div id="shopb" style="display:none"><input class="f" id="ls2" placeholder="Shop name"><input class="f" id="lcity" placeholder="City"></div><input class="f" id="lm" inputmode="numeric" placeholder="Mobile number"><input class="f" id="lp" type="password" placeholder="Password (min 8 characters)"><button class="btn" id="lb">Login</button><p style="margin-top:10px"><a href="#forgot">Forgot password?</a></p><div id="gbtn" style="margin-top:12px"></div></div>`;
  bindLogin=function(){let mode="login",role="customer";const sh2=()=>{$("#ln").style.display=mode=="register"?"block":"none";$("#shopb").style.display=mode=="register"&&role=="seller"?"block":"none";$("#lb").textContent=mode=="login"?"Login":"Create account"};
   document.querySelectorAll("[data-role]").forEach(b=>b.onclick=()=>{role=b.dataset.role;document.querySelectorAll("[data-role]").forEach(x=>x.classList.toggle("on",x==b));sh2()});
@@ -440,6 +441,11 @@ document.addEventListener("click",async e=>{const t=e.target.closest("[data-gj],
 const _r4=render;render=function(){const h=(location.hash||"#home").slice(1);_r4();if(h=="home")drawHome();if(h=="requests")drawReq();if(h.startsWith("seller-"))drawSellerPage(h.slice(7));if(h=="login")loadGsi()};
 }
 
+
+// ---- back button: step by step, helper sheet closes first ----
+let SHSTATE=false;
+new MutationObserver(()=>{const on=sh.classList.contains("on");if(on&&!SHSTATE){history.pushState({sh:1},"");SHSTATE=true}else if(!on&&SHSTATE){SHSTATE=false;if(history.state&&history.state.sh)history.back()}}).observe(sh,{attributes:true,attributeFilter:["class"]});
+addEventListener("popstate",()=>{if(SHSTATE&&sh.classList.contains("on")){SHSTATE=false;sh.classList.remove("on");if(window.speechSynthesis)speechSynthesis.cancel()}else if(history.state&&history.state.sh&&!sh.classList.contains("on")){history.back()}});
 async function boot(){if(ONLINE){S.ads=[];S.adm=null;try{await loadP();try{CFG=await api("/config")}catch(e){}AI=!!CFG.ai;try{await loadCats()}catch(e){}if(S.token){try{S.myid=(await api("/auth/me")).user.id;await pullCart();await pullOrders();await pullNotes();await pullWish()}catch(e){S.token=null;S.user=null}}S.wish=S.wish.filter(i=>pid(i))}catch(e){toast("Cannot reach the server")}}syncAds();upd();render()}
 
 addEventListener("hashchange",render);boot();
